@@ -3,6 +3,8 @@ import * as jsonfile from "jsonfile";
 import fetch from "node-fetch";
 import { structure } from ".";
 import slugify from "slugify";
+import deepEqual from "deep-equal";
+
 const semver = require("semver");
 const STORE_LIST_URL =
   "https://raw.githubusercontent.com/massalabs/station-store/main/plugins.json";
@@ -46,25 +48,23 @@ export class StorePlugin {
   constructor(plugin: TypePlugin) {
     this.name = plugin.name;
     this.author = plugin.author;
-    const name_slugified = slugify(plugin.name, { lower: true }); // replace spaces with dashes
-    const pluginAssetDirectory = `assets/${name_slugified}`; // replace spaces with dashes
-    this.logo = `${pluginAssetDirectory}/${plugin.logo}`;
+    this.logo = plugin.logo;
     this.description = plugin.description;
     this.massaStationVersion = plugin.massaStationVersion;
     this.assets = plugin.assets;
     this.version = plugin.version;
     this.url = plugin.url;
   }
-
+  
+  getLogoPath() {
+    const name_slugified = slugify(this.name, { lower: true });
+    const pluginAssetDirectory = `assets/${name_slugified}`;
+    return `${pluginAssetDirectory}/${this.logo}`;
+  }
   isFollowingStructure() {
     return jsonschema.validate(this, structure).errors.length == 0;
   }
 
-  pluginInLastStoreVersion(lastVersion: StorePlugin[]) {
-    return lastVersion.find(
-      (lastVersionPlugin) => lastVersionPlugin.name === this.name
-    );
-  }
   getPluginLastVersion(lastVersionPlugins: StorePlugin[]) {
     return lastVersionPlugins.find(
       (lastVersionPlugin) => lastVersionPlugin.name === this.name
@@ -84,7 +84,6 @@ export async function writePluginsData(plugins: StorePlugin[]) {
 }
 
 export async function getPluginsData() {
-
   return await jsonfile.readFile("plugins.json");
 }
 
@@ -104,8 +103,7 @@ export async function getPlugins() {
   }
 
   let commonPlugins: StorePlugin[] = [];
-  let newPlugins: StorePlugin[] = [];
-  let updatedPlugins: StorePlugin[] = [];
+  let changedPlugins: StorePlugin[] = [];
 
   plugins.forEach((plugin) => {
     let lastVersionPlugin = lastVersion.find(
@@ -113,22 +111,19 @@ export async function getPlugins() {
     );
 
     if (lastVersionPlugin) {
-      let isSameVersion = plugin.version === lastVersionPlugin.version;
-      if (isSameVersion) {
+      const objEquals = deepEqual(plugin, lastVersionPlugin);
+      if (objEquals) {
         commonPlugins.push(plugin);
       } else {
-        updatedPlugins.push(plugin);
+        changedPlugins.push(plugin);
       }
     } else {
-      newPlugins.push(plugin);
+      changedPlugins.push(plugin);
     }
   });
 
   return {
-    plugins,
-    lastVersion,
     commonPlugins,
-    newPlugins,
-    updatedPlugins,
+    changedPlugins,
   };
 }

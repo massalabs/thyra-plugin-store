@@ -43,32 +43,18 @@ async function checkPluginZips(plugin: StorePlugin) {
   }
 }
 export async function validateList() {
-  const { plugins, lastVersion, commonPlugins, newPlugins, updatedPlugins } =
-    await getPlugins();
+  const { changedPlugins } = await getPlugins();
   // check if all plugins have a different name
-  const setPluginName = new Set(plugins.map((plugin) => plugin.name));
-  const allPluginsHaveDifferentNames = setPluginName.size == plugins.length;
+  const setPluginName = new Set(changedPlugins.map((plugin) => plugin.name));
+  const allPluginsHaveDifferentNames =
+    setPluginName.size == changedPlugins.length;
 
   if (!allPluginsHaveDifferentNames) {
     throw new Error("Error: Plugin name is duplicated");
   }
 
-  const onlyOneUpdateAndNoNew =
-    newPlugins.length == 0 && updatedPlugins.length == 1;
-  const onlyOneNewAndNoUpdate =
-    newPlugins.length == 1 && updatedPlugins.length == 0;
-  const onlyOneChange = onlyOneNewAndNoUpdate || onlyOneUpdateAndNoNew;
-
-  if (!onlyOneChange) {
-    console.warn("There should be either one new plugin or one updated plugin");
-  } else {
-    //changedPlugin is either the new plugin or the updated plugin
-    let changedPlugin = !!newPlugins.length ? newPlugins[0] : updatedPlugins[0];
-    const allCommonPluginsWhereTheSameInLastVersion = commonPlugins.every(
-      (plugin) => plugin.pluginInLastStoreVersion(lastVersion)
-    );
-
-    const logo = changedPlugin.logo;
+  changedPlugins.forEach(async (changedPlugin) => {
+    const logo = changedPlugin.getLogoPath();
     const url = changedPlugin.url;
 
     // url should be a github repo : http(s)://github.com/<org>/<repo>
@@ -78,10 +64,6 @@ export async function validateList() {
 
     if (!isUrlValid) {
       throw new Error("Invalid url");
-    }
-
-    if (!allCommonPluginsWhereTheSameInLastVersion) {
-      throw new Error("Invalid commonPlugins");
     }
 
     const dimLogo = await getImageDimensions(logo);
@@ -99,15 +81,8 @@ export async function validateList() {
       throw new Error("Logo width should be a square smaller than 40px");
     }
 
-    if (onlyOneUpdateAndNoNew) {
-      const isUpdatedVersionHigher =
-        changedPlugin.isNewVersionHigher(lastVersion);
-      if (!isUpdatedVersionHigher) {
-        throw new Error("Invalid plugin version");
-      }
-    }
     await checkPluginZips(changedPlugin);
-  }
+  });
 }
 
 validateList();

@@ -1,7 +1,7 @@
 import * as jsonschema from "jsonschema";
 import * as jsonfile from "jsonfile";
 import fetch from "node-fetch";
-import { structure } from ".";
+import { getManifestContent, pluginStructure, structure } from ".";
 import slugify from "slugify";
 const semver = require("semver");
 const STORE_LIST_URL =
@@ -58,6 +58,14 @@ export class StorePlugin {
 
   isFollowingStructure() {
     return jsonschema.validate(this, structure).errors.length == 0;
+  }
+
+  async isPluginManifestInAssetFollowingStructure(assetUrl: string) {
+    const pluginManifest = await getManifestContent(assetUrl);
+
+    return (
+      jsonschema.validate(pluginManifest, pluginStructure).errors.length == 0
+    );
   }
 
   pluginInLastStoreVersion(lastVersion: StorePlugin[]) {

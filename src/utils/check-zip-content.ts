@@ -56,3 +56,19 @@ export async function checkFileChecksum(
     return false;
   }
 }
+
+/**
+ * Gets the manifest content of a zip file located at the specified URL
+ * @param {string} url - The URL of the zip file
+ * @returns {Promise<object>} - A promise that resolves with the manifest content of the zip file
+ */
+export async function getManifestContent(url: string) {
+  const zipFileBuffer = await get(url);
+  const zip = new AdmZip(zipFileBuffer);
+  const entries = zip.getEntries();
+  const manifest = entries.find(
+    (entry: { name: string }) => entry.name === "manifest.json"
+  );
+
+  return await JSON.parse(zip.readAsText(manifest));
+}

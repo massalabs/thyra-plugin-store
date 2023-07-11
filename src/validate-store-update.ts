@@ -23,22 +23,27 @@ function areAllFilesInZipValid(files: Array<string>, pattern: RegExp) {
   );
 }
 async function checkPluginZips(plugin: StorePlugin) {
-  for (let asset in plugin.assets) {
-    let assetUrl = plugin.assets[asset].url;
+  for (let assetName in plugin.assets) {
+    const asset = plugin.assets[assetName];
+    let { url: assetUrl, checksum } = asset;
     let files = await getZipFileList(assetUrl);
-    const filesAreValid = areAllFilesInZipValid(files, patterns[asset]);
+    const filesAreValid = areAllFilesInZipValid(files, patterns[assetName]);
 
     if (!filesAreValid) {
-      throw new Error(`Invalid files in zip for ${asset}`);
+      throw new Error(`Invalid files in zip for ${assetName}`);
     }
 
-    let checksumIsValid = await checkFileChecksum(
-      assetUrl,
-      plugin.assets[asset].checksum
-    );
+    let checksumIsValid = await checkFileChecksum(assetUrl, checksum);
 
     if (!checksumIsValid) {
       throw new Error("Invalid asset checksum");
+    }
+
+    let manifestIsValid =
+      await plugin.isPluginManifestInAssetFollowingStructure(assetUrl);
+
+    if (!manifestIsValid) {
+      throw new Error("Invalid manifest");
     }
   }
 }

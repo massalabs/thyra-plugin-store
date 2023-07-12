@@ -22,6 +22,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "deep-equal": "^2.2.1",
     "slugify": "^1.6.6"
   }
 }
